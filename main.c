@@ -6,8 +6,10 @@
 	#include <CL/cl.h>
 #endif
 
+#include "source.h"
+#include <string.h>
 #define MEM_SIZE (128)
-#define MAX_SOURCE_SIZE (0x100000)
+#define MAX_SOURCE_SIZE (174)
 
 int main() {
 	cl_device_id device_id = NULL;
@@ -19,25 +21,11 @@ int main() {
 	cl_uint ret_num_devices;
 	cl_uint ret_num_platforms;
 	cl_int ret;
+
 	int v1[4] = { 4, 3, 2, 1 };
 	int v2[4] = { 4, 3, 2, 1 };
 	int vOut[4];
 
-	FILE* fp;
-	char fileName[] = "./kernal.cl";
-	char* source_str;
-	size_t source_size;
-
-	/* Load the source code containing the kernel*/
-	fp = fopen(fileName, "r");
-	if (!fp) {
-		fprintf(stderr, "Failed to load kernel.\n");
-		exit(1);
-	}
-
-	source_str = (char*)malloc(MAX_SOURCE_SIZE);
-	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
-	fclose(fp);
 	/* Get Platform and Device Info */
 	ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
 	ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_DEFAULT, 1, &device_id, &ret_num_devices);
@@ -53,8 +41,10 @@ int main() {
 	cl_mem v2gpuOut = clCreateBuffer(context, CL_MEM_READ_WRITE, 4 * sizeof(int), NULL, &ret);
 
 	/* Create Kernel Program from the source */
-	program = clCreateProgramWithSource(context, 1, (const char**)&source_str,
-		(const size_t*)&source_size, &ret);
+	const char** g[1];
+	g[0] = kernal_source;
+	program = clCreateProgramWithSource(context, 1, g,
+		NULL, &ret);
 
 	/* Build Kernel Program */
 	ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
@@ -93,7 +83,6 @@ int main() {
 	ret = clReleaseMemObject(v2gpuOut);
 	ret = clReleaseCommandQueue(command_queue);
 	ret = clReleaseContext(context);
-	free(source_str);
-
+	getchar();
 	return 0;
 }
