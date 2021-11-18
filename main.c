@@ -41,7 +41,6 @@ int main() {
 	const char** g[1];
 	g[0] = kernal_source;
 
-	(const char**)&sdfsdf;
 	program = clCreateProgramWithSource(context, 1, g,
 		NULL, &ret);
 
