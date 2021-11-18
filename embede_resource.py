@@ -1,11 +1,11 @@
 import argparse
 from pathlib import PurePosixPath
-c_string = "const char {0}[] = {1} {2} {3}\n"
+c_string = "const char* {0} = {1} {2} {3};\n"
 c_comment_string = "// File {}\n"
 
 def string_to_c_array(var_name, string_data):
-	hex_data = [ hex(ord(i)) for i in string_data]
-	result_variable = c_string.format(var_name, "{", ",".join(hex_data), "};")
+	hex_data = ' '.join(string_data.split())
+	result_variable = c_string.format(var_name, '"', hex_data, '"')
 	return result_variable
 
 def formate_c_variable(c_variable, file_name):

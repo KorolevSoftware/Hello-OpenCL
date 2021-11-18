@@ -6,10 +6,8 @@
 	#include <CL/cl.h>
 #endif
 
-#include "source.h"
+#include <source.h>
 #include <string.h>
-#define MEM_SIZE (128)
-#define MAX_SOURCE_SIZE (174)
 
 int main() {
 	cl_device_id device_id = NULL;
@@ -21,7 +19,6 @@ int main() {
 	cl_uint ret_num_devices;
 	cl_uint ret_num_platforms;
 	cl_int ret;
-
 	int v1[4] = { 4, 3, 2, 1 };
 	int v2[4] = { 4, 3, 2, 1 };
 	int vOut[4];
@@ -43,6 +40,8 @@ int main() {
 	/* Create Kernel Program from the source */
 	const char** g[1];
 	g[0] = kernal_source;
+
+	(const char**)&sdfsdf;
 	program = clCreateProgramWithSource(context, 1, g,
 		NULL, &ret);
 
@@ -61,7 +60,6 @@ int main() {
 	ret = clEnqueueWriteBuffer(command_queue, v1gpu, CL_TRUE, 0, 4 * sizeof(int), v1, 0, NULL, NULL);
 	ret = clEnqueueWriteBuffer(command_queue, v2gpu, CL_TRUE, 0, 4 * sizeof(int), v2, 0, NULL, NULL);
 	/* Execute OpenCL Kernel */
-	//ret = clEnqueueTask(command_queue, kernel, 0, NULL, NULL);
 
 	size_t globalSize[1] = { 4 };
 	ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, globalSize, NULL, 0,
