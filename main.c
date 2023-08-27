@@ -1,27 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #ifdef __APPLE__
 	#include <OpenCL/opencl.h>
 #else
 	#include <CL/cl.h>
 #endif
 
-#include <source.h>
+#include <kernal_cl.h>
 #include <string.h>
 
+#define array_count(x) sizeof(x)/sizeof(x[0])
+
+
 int main() {
-	cl_device_id device_id = NULL;
-	cl_context context = NULL;
-	cl_command_queue command_queue = NULL;
-	cl_program program = NULL;
-	cl_kernel kernel = NULL;
-	cl_platform_id platform_id = NULL;
+	cl_device_id device_id;
+	cl_context context;
+	cl_command_queue command_queue;
+	cl_program program;
+	cl_kernel kernel;
+	cl_platform_id platform_id;
 	cl_uint ret_num_devices;
 	cl_uint ret_num_platforms;
 	cl_int ret;
-	int v1[4] = { 4, 3, 2, 1 };
-	int v2[4] = { 4, 3, 2, 1 };
-	int vOut[4];
+
+	int input_vector_1[] = { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+	int input_vector_2[] = { 1, 2, 3, 4,5, 6, 7, 8, 9 };
+	int output_vector[array_count(input_vector_2)];
 
 	/* Get Platform and Device Info */
 	ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
@@ -33,15 +38,14 @@ int main() {
 	command_queue = clCreateCommandQueue(context, device_id, 0, &ret);
 
 	/* Create Memory Buffer */
-	cl_mem v1gpu = clCreateBuffer(context, CL_MEM_READ_WRITE, 4 * sizeof(int), NULL, &ret);
-	cl_mem v2gpu = clCreateBuffer(context, CL_MEM_READ_WRITE, 4 * sizeof(int), NULL, &ret);
-	cl_mem v2gpuOut = clCreateBuffer(context, CL_MEM_READ_WRITE, 4 * sizeof(int), NULL, &ret);
+	cl_mem v1gpu = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(input_vector_1), NULL, &ret);
+	cl_mem v2gpu = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(input_vector_2), NULL, &ret);
+	cl_mem v2gpuOut = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(output_vector), NULL, &ret);
 
 	/* Create Kernel Program from the source */
-	const char** g[1];
-	g[0] = kernal_source;
+	const char** kernal_soure_code[] = { kernal_cl_data };
 
-	program = clCreateProgramWithSource(context, 1, g,
+	program = clCreateProgramWithSource(context, array_count(kernal_soure_code), kernal_soure_code,
 		NULL, &ret);
 
 	/* Build Kernel Program */
@@ -55,20 +59,24 @@ int main() {
 	ret = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void*)&v2gpu);
 	ret = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void*)&v2gpuOut);
 
-	/* Copy data host to gpu */
-	ret = clEnqueueWriteBuffer(command_queue, v1gpu, CL_TRUE, 0, 4 * sizeof(int), v1, 0, NULL, NULL);
-	ret = clEnqueueWriteBuffer(command_queue, v2gpu, CL_TRUE, 0, 4 * sizeof(int), v2, 0, NULL, NULL);
+	/* Copy data host to gpu async */
+	cl_event write_events[2];
+
+	ret = clEnqueueWriteBuffer(command_queue, v1gpu, CL_TRUE, 0, sizeof(input_vector_1), input_vector_1, 0, NULL, &write_events[0]);
+	ret = clEnqueueWriteBuffer(command_queue, v2gpu, CL_TRUE, 0, sizeof(input_vector_2), input_vector_2, 0, NULL, &write_events[1]);
 	/* Execute OpenCL Kernel */
 
-	size_t globalSize[1] = { 4 };
+	clWaitForEvents(2, write_events); // weit data copy to gpu 
+
+	size_t globalSize[1] = { array_count(output_vector) };
 	ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, globalSize, NULL, 0,
 		NULL, NULL);
 
 	/* Copy results from the memory buffer */
-	ret = clEnqueueReadBuffer(command_queue, v2gpuOut, CL_TRUE, 0, 4 * sizeof(int), vOut, 0, NULL, NULL);
+	ret = clEnqueueReadBuffer(command_queue, v2gpuOut, CL_TRUE, 0, sizeof(output_vector), output_vector, 0, NULL, NULL);
 	/* Display Result */
-	for (int i = 0; i < 4; i++)
-		printf("%d * %d = %d \n", v1[i], v2[i], vOut[i]);
+	for (int i = 0; i < array_count(output_vector); i++)
+		printf("%d * %d = %d \n", input_vector_1[i], input_vector_2[i], output_vector[i]);
 
 	/* Finalization */
 	ret = clFlush(command_queue);
